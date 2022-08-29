@@ -48,11 +48,18 @@ def profile(request, username):
     paginator = Paginator(posts, COUNT_POSTS)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    if request.user.is_authenticated:
+        following = Follow.objects.filter(
+            user=request.user, author=user
+        ).exists()
+    else:
+        following = False
     context = {
         'posts': posts,
         'page_obj': page_obj,
         'author': user,
         'counter_posts': counter_posts,
+        'following': following,
     }
     return render(request, template, context)
 
@@ -143,7 +150,8 @@ def add_comment(request, post_id):
 @login_required
 def follow_index(request):
     template = 'posts/follow.html'
-    posts = Post.objects.filter(author__following__user=request.user)
+    user = request.user
+    posts = Post.objects.filter(author__following__user=user)
     paginator = Paginator(posts, COUNT_POSTS)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -158,16 +166,17 @@ def follow_index(request):
 def profile_follow(request, username):
     user = request.user
     author = User.objects.get(username=username)
-    is_follower = Follow.objects.filter(user=user, author=author)
-    if user != author and not is_follower.exists():
+    follower = Follow.objects.filter(user=user, author=author)
+    if user != author and not follower.exists():
         Follow.objects.create(user=user, author=author)
     return redirect(reverse('posts:profile', args=[username]))
 
 
 @login_required
 def profile_unfollow(request, username):
+    user=request.user
     author = get_object_or_404(User, username=username)
-    is_follower = Follow.objects.filter(user=request.user, author=author)
-    if is_follower.exists():
-        is_follower.delete()
+    follower = Follow.objects.filter(user=user, author=author)
+    if follower.exists():
+        follower.delete()
     return redirect('posts:profile', username=author)

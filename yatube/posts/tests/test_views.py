@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from posts.models import Post, Group
+from posts.models import Post, Group, Follow
 from django import forms
 from django.core.cache import cache
 
@@ -213,3 +213,53 @@ class PaginatorViewsTest(TestCase):
             self.assertEqual(len(
                 response.context['page_obj']
             ), len(self.post) - COUNT_POSTS)
+
+
+class FollowTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user1 = User.objects.create_user(username='follower')
+        cls.user2 = User.objects.create_user(username='author')
+        cls.group = Group.objects.create(
+            title='Тестовая группа',
+            slug='test-slug',
+            description='Тестовое описание',
+        )
+        cls.post = Post.objects.create(
+            author=cls.user2,
+            text='Тестовый текст',
+            group=cls.group,
+        )
+
+    def setUp(self):
+        self.follower = Client()
+        self.follower.force_login(self.user1)
+        self.author = Client()
+        self.author.force_login(self.user2)
+
+    def test_follow(self):
+        """Авторизованный может подписываться"""
+        self.follower.get(
+            reverse('posts:profile_follow', kwargs={'username': 'author'}))
+        self.assertEqual(Follow.objects.all().count(), 1)
+
+    def test_unfollow(self):
+        """Авторизованный может отписываться"""
+        self.follower.get(
+            reverse('posts:profile_unfollow', kwargs={'username': 'author'}))
+        self.assertEqual(Follow.objects.all().count(), 0)
+
+    def test_have_not_post_when_unfollow(self):
+        response = self.follower.get(
+            reverse('posts:follow_index'))
+        with self.assertRaises(IndexError):
+            response.context['page_obj'][0].text
+
+    def test_have_not_post_when_follow(self):
+        self.follower.get(
+            reverse('posts:profile_follow', kwargs={'username': 'author'}))
+        response = self.follower.get(
+            reverse('posts:follow_index'))
+        self.assertEqual(
+            response.context['page_obj'][0].text, 'Тестовый текст')
