@@ -164,6 +164,29 @@ class PostPagesTest(TestCase):
         post_text = first_object.text
         self.assertEqual(post_text, 'Тестовый текст')
 
+    def test_500_403(self):
+        """Проверка шаблонов страниц 500 и 403"""
+        templates = {
+            reverse('posts:index'): 'posts/index.html',
+            reverse(
+                'posts:group_list', kwargs={'slug': 'test-slug'}
+            ): 'posts/group_list.html',
+            reverse(
+                'posts:profile', kwargs={'username': 'auth'}
+            ): 'posts/profile.html',
+            reverse(
+                'posts:post_detail', args={f'{self.post.id}'}
+            ): 'posts/post_detail.html',
+            reverse(
+                'posts:post_edit', args={f'{self.post.id}'}
+            ): 'posts/create_post.html',
+            reverse('posts:post_create'): 'posts/create_post.html',
+        }
+        for name, template in templates.items():
+            with self.subTest(reverse_name=name):
+                response = self.auth_client.get(name)
+                self.assertTemplateUsed(response, template)
+
 
 class PaginatorViewsTest(TestCase):
     @classmethod

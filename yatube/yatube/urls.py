@@ -20,6 +20,8 @@ from django.conf.urls.static import static
 
 
 handler404 = 'core.views.page_not_found'
+handler500 = 'mysite.views.my_custom_error_view'
+handler403 = 'mysite.views.my_custom_permission_denied_view'
 
 urlpatterns = [
     path('admin/', admin.site.urls),
