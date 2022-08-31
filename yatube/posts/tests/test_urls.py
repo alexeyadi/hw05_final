@@ -19,7 +19,7 @@ class PostURLTests(TestCase):
             description='Тестовое описание',
         )
         cls.post = Post.objects.create(
-            author=cls.user,
+            author=cls.author,
             text='Тестовый текст',
             group=cls.group,
         )
@@ -66,12 +66,54 @@ class PostURLTests(TestCase):
         response = self.auth_client.get('/create/')
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
+    def test_follow_unfollow_for_auth(self):
+        """Проверка страниц подписки и отписки для авторизованного"""
+        testing_url = {
+            f'/profile/{self.post.author.username}/follow/':
+            f'/profile/{self.post.author.username}/',
+            f'/profile/{self.post.author.username}/unfollow/':
+            f'/profile/{self.post.author.username}/',
+        }
+        for url, redirect in testing_url.items():
+            with self.subTest(address=url):
+                response = self.auth_client.get(url)
+                self.assertRedirects(response, redirect)
+
+    def test_follow_unfollow_for_guest(self):
+        """Проверка страниц подписки и отписки для гостя"""
+        str_part1 = '/auth/login/?next=/profile/'
+        str_part2 = f'{self.post.author.username}/unfollow/'
+        testing_url = {
+            f'/profile/{self.post.author.username}/follow/':
+            f'/auth/login/?next=/profile/{self.post.author.username}/follow/',
+            f'/profile/{self.post.author.username}/unfollow/':
+            str_part1 + str_part2,
+        }
+        for url, redirect in testing_url.items():
+            with self.subTest(address=url):
+                response = self.guest_client.get(url)
+                self.assertRedirects(response, redirect)
+
+    def test_comment_add_for_auth(self):
+        """Проверка добавления комментария"""
+        response = self.auth_client.get(
+            f'/posts/{PostURLTests.post.id}/comment/')
+        self.assertRedirects(response, f'/posts/{PostURLTests.post.id}/')
+
+    def test_comment_add_for_guest(self):
+        """Проверка добавления комментария"""
+        response = self.guest_client.get(
+            f'/posts/{PostURLTests.post.id}/comment/')
+        self.assertRedirects(
+            response,
+            f'/auth/login/?next=/posts/{PostURLTests.post.id}/comment/')
+
     def test_404(self):
         """Проверка страницы 404"""
         response = self.guest_client.get('/404/')
         self.assertEqual(response.status_code, 404)
 
-    def test_urls_uses_correct(self):
+    def test_urls_uses_correct_for_auth(self):
         templates_url_names = {
             '/': 'posts/index.html',
             '/group/test-slug/': 'posts/group_list.html',
@@ -79,13 +121,14 @@ class PostURLTests(TestCase):
             f'/posts/{PostURLTests.post.id}/': 'posts/post_detail.html',
             f'/posts/{PostURLTests.post.id}/edit/': 'posts/create_post.html',
             '/create/': 'posts/create_post.html',
+            '/follow/': 'posts/follow.html',
         }
         for url, template in templates_url_names.items():
             with self.subTest(address=url):
                 response = self.auth_client.get(url)
                 self.assertTemplateUsed(response, template)
 
-    def test_urls_uses_correct(self):
+    def test_urls_uses_correct_for_guest(self):
         templates_url_names = {
             '/': 'posts/index.html',
             '/group/test-slug/': 'posts/group_list.html',

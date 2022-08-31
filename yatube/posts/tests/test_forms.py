@@ -155,3 +155,13 @@ class PostFormTests(TestCase):
             response,
             f'/auth/login/?next=/posts/{PostFormTests.post.id}/comment/'
         )
+
+    def test_create_comment_author(self):
+        """Отправка комментария от автора"""
+        response = self.nonauth_client.get(
+            f'/posts/{PostFormTests.post.id}/comment/'
+        )
+        self.assertRedirects(
+            response,
+            f'/auth/login/?next=/posts/{PostFormTests.post.id}/comment/'
+        )

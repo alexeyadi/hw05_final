@@ -5,6 +5,7 @@ from .forms import PostForm, CommentForm
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_page
 from django.urls import reverse
+from django.http import HttpResponseNotFound
 
 
 COUNT_POSTS: int = 10
@@ -48,12 +49,11 @@ def profile(request, username):
     paginator = Paginator(posts, COUNT_POSTS)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    following = False
     if request.user.is_authenticated:
         following = Follow.objects.filter(
             user=request.user, author=user
         ).exists()
-    else:
-        following = False
     context = {
         'posts': posts,
         'page_obj': page_obj,
@@ -121,8 +121,6 @@ def post_edit(request, post_id):
         if post.author.username != request.user.username:
             return redirect('posts:post_detail', post_id)
         if form.is_valid():
-            post = form.save(commit=False)
-            post.author = request.user
             post.save()
             return redirect('posts:post_detail', post_id)
         return render(request, template, context)
@@ -166,6 +164,8 @@ def follow_index(request):
 def profile_follow(request, username):
     user = request.user
     author = User.objects.get(username=username)
+    if author == user:
+        return HttpResponseNotFound()
     follower = Follow.objects.filter(user=user, author=author)
     if user != author and not follower.exists():
         Follow.objects.create(user=user, author=author)

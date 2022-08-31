@@ -244,6 +244,7 @@ class FollowTest(TestCase):
         super().setUpClass()
         cls.user1 = User.objects.create_user(username='follower')
         cls.user2 = User.objects.create_user(username='author')
+        cls.user3 = User.objects.create_user(username='guest')
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -260,6 +261,7 @@ class FollowTest(TestCase):
         self.follower.force_login(self.user1)
         self.author = Client()
         self.author.force_login(self.user2)
+        self.guest = Client()
 
     def test_follow(self):
         """Авторизованный может подписываться"""
@@ -286,3 +288,23 @@ class FollowTest(TestCase):
             reverse('posts:follow_index'))
         self.assertEqual(
             response.context['page_obj'][0].text, 'Тестовый текст')
+
+    def test_have_post_when_follow(self):
+        self.follower.get(
+            reverse('posts:profile_follow', kwargs={'username': 'author'}))
+        response = self.follower.get(
+            reverse('posts:follow_index'))
+        self.assertEqual(
+            response.context['page_obj'][0].text, 'Тестовый текст')
+
+    def test_author_can_not_follow(self):
+        response = self.author.get(
+            reverse('posts:profile_follow', kwargs={'username': 'author'}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_guest_can_not_follow(self):
+        response = self.guest.get(
+            f'/profile/{FollowTest.post.author.username}/follow/')
+        self.assertRedirects(
+            response,
+            f'/auth/login/?next=/profile/{self.post.author.username}/follow/')
