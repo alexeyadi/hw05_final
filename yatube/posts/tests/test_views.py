@@ -297,14 +297,16 @@ class FollowTest(TestCase):
         self.assertEqual(
             response.context['page_obj'][0].text, 'Тестовый текст')
 
-    def test_author_can_not_follow(self):
-        response = self.author.get(
-            reverse('posts:profile_follow', kwargs={'username': 'author'}))
-        self.assertEqual(response.status_code, 404)
-
     def test_guest_can_not_follow(self):
         response = self.guest.get(
             f'/profile/{FollowTest.post.author.username}/follow/')
         self.assertRedirects(
             response,
             f'/auth/login/?next=/profile/{self.post.author.username}/follow/')
+
+    def test_author_can_not_follow_on_himself(self):
+        self.author.get(
+            reverse(
+                'posts:profile_follow',
+                kwargs={'username': self.post.author.username}))
+        self.assertEqual(Follow.objects.all().count(), 0)

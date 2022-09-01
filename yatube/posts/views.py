@@ -5,7 +5,6 @@ from .forms import PostForm, CommentForm
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_page
 from django.urls import reverse
-from django.http import HttpResponseNotFound
 
 
 COUNT_POSTS: int = 10
@@ -164,8 +163,6 @@ def follow_index(request):
 def profile_follow(request, username):
     user = request.user
     author = User.objects.get(username=username)
-    if author == user:
-        return HttpResponseNotFound()
     follower = Follow.objects.filter(user=user, author=author)
     if user != author and not follower.exists():
         Follow.objects.create(user=user, author=author)
